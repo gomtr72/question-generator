@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>질문 생성기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>질문 생성기</h1>
+        <div class="input-section">
+            <select id="contentType" onchange="showContentInput()">
+                <option value="">콘텐츠 타입 선택</option>
+                <option value="text">텍스트</option>
+                <option value="pdf">PDF 파일</option>
+                <option value="youtube">유튜브 URL</option>
+                <option value="image">이미지</option>
+                <option value="website">웹사이트 URL</option>
+            </select>
+
+            <!-- 텍스트 입력 -->
+            <div id="textInput" class="content-input" style="display: none;">
+                <textarea placeholder="분석할 텍스트를 입력하세요"></textarea>
+                <button onclick="processContent('text')">분석하기</button>
+            </div>
+
+            <!-- 파일 업로드 (PDF, 이미지) -->
+            <div id="fileInput" class="content-input" style="display: none;">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <input type="file" id="fileUpload" accept=".pdf,.png,.jpg,.jpeg">
+                    <button type="button" onclick="uploadFile()">업로드 및 분석</button>
+                </form>
+            </div>
+
+            <!-- URL 입력 (유튜브, 웹사이트) -->
+            <div id="urlInput" class="content-input" style="display: none;">
+                <input type="url" placeholder="URL을 입력하세요">
+                <button onclick="processContent('url')">분석하기</button>
+            </div>
+        </div>
+
+        <div id="result" class="result-section" style="display: none;">
+            <h2>분석 결과</h2>
+            <div class="summary-section">
+                <h3>요약</h3>
+                <p id="summary"></p>
+            </div>
+            <div class="topics-section">
+                <h3>핵심 주제</h3>
+                <ul id="topics"></ul>
+            </div>
+            <div class="questions-section">
+                <h3>생성된 질문</h3>
+                <div id="questions"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showContentInput() {
+            const contentType = document.getElementById('contentType').value;
+            document.querySelectorAll('.content-input').forEach(el => el.style.display = 'none');
+            
+            if (contentType === 'text') {
+                document.getElementById('textInput').style.display = 'block';
+            } else if (contentType === 'pdf' || contentType === 'image') {
+                document.getElementById('fileInput').style.display = 'block';
+                document.getElementById('fileUpload').accept = contentType === 'pdf' ? '.pdf' : '.png,.jpg,.jpeg';
+            } else if (contentType === 'youtube' || contentType === 'website') {
+                document.getElementById('urlInput').style.display = 'block';
+            }
+        }
+
+        async function uploadFile() {
+            const contentType = document.getElementById('contentType').value;
+            const fileInput = document.getElementById('fileUpload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('파일을 선택해주세요.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('type', contentType);
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                handleResponse(response);
+            } catch (error) {
+                alert('오류가 발생했습니다: ' + error.message);
+            }
+        }
+
+        async function processContent(inputType) {
+            const contentType = document.getElementById('contentType').value;
+            let content;
+
+            if (inputType === 'text') {
+                content = document.querySelector('#textInput textarea').value;
+            } else if (inputType === 'url') {
+                content = document.querySelector('#urlInput input').value;
+            }
+
+            if (!content) {
+                alert('내용을 입력해주세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: contentType,
+                        content: content
+                    })
+                });
+
+                handleResponse(response);
+            } catch (error) {
+                alert('오류가 발생했습니다: ' + error.message);
+            }
+        }
+
+        async function handleResponse(response) {
+            const data = await response.json();
+            
+            if (response.ok) {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('summary').textContent = data.summary;
+                
+                const topicsList = document.getElementById('topics');
+                topicsList.innerHTML = '';
+                data.topics.forEach(topic => {
+                    const li = document.createElement('li');
+                    li.textContent = topic;
+                    topicsList.appendChild(li);
+                });
+
+                const questionsDiv = document.getElementById('questions');
+                questionsDiv.innerHTML = '';
+                data.questions.forEach((question, index) => {
+                    const questionElement = document.createElement('div');
+                    questionElement.className = 'question';
+                    
+                    // 질문과 보기 표시
+                    questionElement.innerHTML = `
+                        <p class="question-text"><strong>Q${index + 1}.</strong> ${question.질문}</p>
+                        <div class="choices">
+                            ${Object.entries(question.보기).map(([key, value]) => `
+                                <label class="choice-label">
+                                    <input type="radio" name="q${index}" value="${key}">
+                                    <div class="choice-content">
+                                        <div class="choice-header">
+                                            <span class="choice-key">${key}</span>
+                                        </div>
+                                        <div class="choice-text">${value.질문}</div>
+                                    </div>
+                                </label>
+                            `).join('')}
+                        </div>
+                        <div class="answer" style="display: none;">
+                            <div class="answer-header">
+                                <strong>정답:</strong> ${question.정답}
+                            </div>
+                            <div class="proximity-scores">
+                                <h4>각 보기의 핵심 개념 근접도:</h4>
+                                ${Object.entries(question.보기).map(([key, value]) => `
+                                    <div class="proximity-item ${key === question.정답 ? 'correct' : ''}">
+                                        <span class="choice-key">${key}</span>
+                                        <div class="proximity-bar" style="width: ${value.근접도}%;">
+                                            <span class="proximity-score">${value.근접도}점</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="answer-explanation">
+                                <p><strong>정답 설명:</strong> ${question.해설.정답_설명}</p>
+                                <p><strong>오답 설명:</strong> ${question.해설.오답_설명}</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleAnswer(${index})" class="toggle-answer">정답 확인</button>
+                    `;
+                    questionsDiv.appendChild(questionElement);
+                });
+            } else {
+                alert(data.error || '오류가 발생했습니다.');
+            }
+        }
+
+        function toggleAnswer(questionIndex) {
+            const answerElement = document.querySelectorAll('.question')[questionIndex].querySelector('.answer');
+            const button = document.querySelectorAll('.question')[questionIndex].querySelector('button');
+            
+            if (answerElement.style.display === 'none') {
+                answerElement.style.display = 'block';
+                button.textContent = '정답 숨기기';
+            } else {
+                answerElement.style.display = 'none';
+                button.textContent = '정답 확인';
+            }
+        }
+    </script>
+</body>
+</html> 

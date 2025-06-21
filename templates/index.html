@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>질문연금술사</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">질문연금술사</h1>
+        
+        <!-- 콘텐츠 입력 폼 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4">콘텐츠 입력</h2>
+            <div class="space-y-4">
+                <div>
+                    <select id="contentType" class="w-full p-2 border rounded">
+                        <option value="text">텍스트</option>
+                        <option value="pdf">PDF</option>
+                        <option value="youtube">유튜브 URL</option>
+                        <option value="website">웹사이트 URL</option>
+                        <option value="image">이미지</option>
+                    </select>
+                </div>
+                <div id="textInput" class="content-input">
+                    <textarea class="w-full p-2 border rounded" rows="6" placeholder="텍스트를 입력하세요..."></textarea>
+                </div>
+                <div id="fileInput" class="content-input hidden">
+                    <input type="file" class="w-full p-2 border rounded" accept=".pdf">
+                </div>
+                <div id="imageInput" class="content-input hidden">
+                    <input type="file" class="w-full p-2 border rounded" accept="image/*">
+                </div>
+                <div id="urlInput" class="content-input hidden">
+                    <input type="url" class="w-full p-2 border rounded" placeholder="URL을 입력하세요...">
+                </div>
+                <button id="processBtn" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+                    분석 시작
+                </button>
+            </div>
+        </div>
+
+        <!-- 결과 표시 영역 -->
+        <div id="results" class="space-y-8 hidden">
+            <!-- 요약 및 주제 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4">요약 및 주제</h2>
+                <div id="summary" class="mb-4"></div>
+                <div id="topics"></div>
+            </div>
+
+            <!-- 질문 목록 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4">생성된 질문</h2>
+                <div id="questions" class="space-y-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 입력 타입 전환
+        document.getElementById('contentType').addEventListener('change', function(e) {
+            document.querySelectorAll('.content-input').forEach(el => el.classList.add('hidden'));
+            switch(e.target.value) {
+                case 'text':
+                    document.getElementById('textInput').classList.remove('hidden');
+                    break;
+                case 'pdf':
+                    document.getElementById('fileInput').classList.remove('hidden');
+                    break;
+                case 'image':
+                    document.getElementById('imageInput').classList.remove('hidden');
+                    break;
+                case 'youtube':
+                case 'website':
+                    document.getElementById('urlInput').classList.remove('hidden');
+                    break;
+            }
+        });
+
+        // 분석 처리
+        document.getElementById('processBtn').addEventListener('click', async function() {
+            const contentType = document.getElementById('contentType').value;
+            let content;
+
+            switch(contentType) {
+                case 'text':
+                    content = document.querySelector('#textInput textarea').value;
+                    break;
+                case 'pdf':
+                    const pdfFile = document.querySelector('#fileInput input').files[0];
+                    if (pdfFile) {
+                        const reader = new FileReader();
+                        content = await new Promise((resolve) => {
+                            reader.onload = (e) => resolve(e.target.result);
+                            reader.readAsDataURL(pdfFile);
+                        });
+                    }
+                    break;
+                case 'image':
+                    const imageFile = document.querySelector('#imageInput input').files[0];
+                    if (imageFile) {
+                        const reader = new FileReader();
+                        content = await new Promise((resolve) => {
+                            reader.onload = (e) => resolve(e.target.result);
+                            reader.readAsDataURL(imageFile);
+                        });
+                    }
+                    break;
+                case 'youtube':
+                case 'website':
+                    content = document.querySelector('#urlInput input').value;
+                    break;
+            }
+
+            if (!content) {
+                alert('콘텐츠를 입력해주세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ type: contentType, content }),
+                });
+
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                displayResults(data);
+            } catch (error) {
+                alert('처리 중 오류가 발생했습니다: ' + error.message);
+            }
+        });
+
+        // 결과 표시
+        function displayResults(data) {
+            document.getElementById('results').classList.remove('hidden');
+            
+            // 요약 및 주제 표시
+            document.getElementById('summary').innerHTML = `
+                <h3 class="font-semibold mb-2">요약</h3>
+                <p class="text-gray-700">${data.summary}</p>
+            `;
+            
+            document.getElementById('topics').innerHTML = `
+                <h3 class="font-semibold mb-2">핵심 주제</h3>
+                <ul class="list-disc list-inside text-gray-700">
+                    ${data.topics.map(topic => `<li>${topic}</li>`).join('')}
+                </ul>
+            `;
+
+            // 질문 표시
+            const questionsHtml = data.questions.map((q, idx) => `
+                <div class="border-b pb-4">
+                    <h3 class="font-semibold mb-2">질문 ${idx + 1}</h3>
+                    <p class="mb-2">${q.질문}</p>
+                    <p class="text-sm text-gray-600">수준: ${q.수준}</p>
+                    <p class="text-sm text-gray-600">이유: ${q.이유}</p>
+                    
+                    <div class="mt-4">
+                        <h4 class="font-semibold mb-2">사고 수준 평가</h4>
+                        <div class="space-y-2">
+                            ${Object.entries(q.객관식.보기).map(([key, value]) => `
+                                <label class="block">
+                                    <input type="radio" name="q${idx}" value="${key}">
+                                    ${key}. ${value}
+                                </label>
+                            `).join('')}
+                        </div>
+                        <button class="check-answer mt-2 px-4 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                                data-question="${idx}"
+                                data-answer="${q.객관식.정답}">
+                            정답 확인
+                        </button>
+                        <div class="feedback mt-2 hidden"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('questions').innerHTML = questionsHtml;
+
+            // 정답 확인 버튼 이벤트 리스너 추가
+            document.querySelectorAll('.check-answer').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const questionIdx = this.dataset.question;
+                    const correctAnswer = this.dataset.answer;
+                    const selectedAnswer = document.querySelector(`input[name="q${questionIdx}"]:checked`);
+
+                    if (!selectedAnswer) {
+                        alert('답을 선택해주세요.');
+                        return;
+                    }
+
+                    const question = data.questions[questionIdx].질문;
+                    const response = await fetch('/feedback', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            question: question,
+                            gpt_level: correctAnswer,
+                            user_level: selectedAnswer.value
+                        }),
+                    });
+
+                    const feedbackData = await response.json();
+                    const feedbackDiv = this.nextElementSibling;
+                    feedbackDiv.textContent = feedbackData.feedback;
+                    feedbackDiv.classList.remove('hidden');
+                });
+            });
+        }
+    </script>
+</body>
+</html> 
