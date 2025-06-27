@@ -11,6 +11,24 @@ class QuestionType(str, Enum):
     ANALYSIS = "analysis"
     SYNTHESIS = "synthesis"
 
+# 질문 유형 설정을 클래스 외부로 이동
+QUESTION_TYPES: Dict[str, List[str]] = {
+    QuestionType.ANALYSIS: [
+        '비교 분석',
+        '원인 분석',
+        '영향 분석',
+        '패턴 분석',
+        '관계 분석'
+    ],
+    QuestionType.SYNTHESIS: [
+        '새로운 해결책 제시',
+        '대안적 접근법 개발',
+        '통합적 관점 제시',
+        '실용적 적용 방안',
+        '혁신적 아이디어 제시'
+    ]
+}
+
 class QuestionConfig(BaseSettings):
     MIN_QUESTIONS: int = Field(default=5, ge=1, le=10)
     MAX_QUESTIONS: int = Field(default=15, ge=10, le=30)
@@ -64,24 +82,6 @@ class Config(BaseSettings):
     YOUTUBE: YouTubeConfig = YouTubeConfig()
     LOG: LogConfig = LogConfig()
     
-    # 질문 유형 설정
-    QUESTION_TYPES: Dict[str, List[str]] = {
-        QuestionType.ANALYSIS: [
-            '비교 분석',
-            '원인 분석',
-            '영향 분석',
-            '패턴 분석',
-            '관계 분석'
-        ],
-        QuestionType.SYNTHESIS: [
-            '새로운 해결책 제시',
-            '대안적 접근법 개발',
-            '통합적 관점 제시',
-            '실용적 적용 방안',
-            '혁신적 아이디어 제시'
-        ]
-    }
-    
     class Config:
         env_file = ".env"
         case_sensitive = True
@@ -112,4 +112,7 @@ config_by_name = {
 # 현재 환경 설정 가져오기
 def get_config() -> Config:
     env = os.getenv("FLASK_ENV", "development")
-    return config_by_name[env] 
+    config = config_by_name[env]
+    # QUESTION_TYPES를 동적으로 추가
+    setattr(config, 'QUESTION_TYPES', QUESTION_TYPES)
+    return config 
