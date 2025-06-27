@@ -1,6 +1,5 @@
 from typing import Dict, List, Optional
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, BaseSettings
 from enum import Enum
 import os
 from dotenv import load_dotenv
@@ -17,7 +16,8 @@ class QuestionConfig(BaseSettings):
     MAX_QUESTIONS: int = Field(default=15, ge=10, le=30)
     DEFAULT_QUESTIONS: int = Field(default=10, ge=5, le=15)
     
-    model_config = SettingsConfigDict(env_prefix='QUESTION_')
+    class Config:
+        env_prefix = 'QUESTION_'
 
 class OpenAIConfig(BaseSettings):
     API_KEY: str = Field(default="")
@@ -25,25 +25,29 @@ class OpenAIConfig(BaseSettings):
     MAX_TOKENS: int = Field(default=2000)
     TEMPERATURE: float = Field(default=0.7)
     
-    model_config = SettingsConfigDict(env_prefix='OPENAI_')
+    class Config:
+        env_prefix = 'OPENAI_'
 
 class GeminiConfig(BaseSettings):
     API_KEY: str = Field(default="")
     MODEL: str = Field(default="gemini-pro")
     
-    model_config = SettingsConfigDict(env_prefix='GEMINI_')
+    class Config:
+        env_prefix = 'GEMINI_'
 
 class YouTubeConfig(BaseSettings):
     API_KEY: str = Field(default="")
     
-    model_config = SettingsConfigDict(env_prefix='YOUTUBE_')
+    class Config:
+        env_prefix = 'YOUTUBE_'
 
 class LogConfig(BaseSettings):
     LEVEL: str = Field(default="INFO")
     FORMAT: str = Field(default="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     FILE: str = Field(default="app.log")
     
-    model_config = SettingsConfigDict(env_prefix='LOG_')
+    class Config:
+        env_prefix = 'LOG_'
 
 class Config(BaseSettings):
     # 기본 Flask 설정
@@ -78,12 +82,11 @@ class Config(BaseSettings):
         ]
     }
     
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=True,
-        env_prefix="",
-        extra='allow'  # 추가 환경 변수 허용
-    )
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+        env_prefix = ""
+        extra = 'allow'  # 추가 환경 변수 허용
 
 # 환경별 설정
 class DevelopmentConfig(Config):
