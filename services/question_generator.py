@@ -1,6 +1,5 @@
 from typing import Any, Dict, List
-from openai import OpenAI
-from openai.types.chat import ChatCompletion
+import openai
 from config import get_config
 import tiktoken
 import time
@@ -9,10 +8,8 @@ import json
 class QuestionGenerator:
     def __init__(self):
         config = get_config()
-        self.client = OpenAI(
-            api_key=config.OPENAI.API_KEY,
-            base_url="https://api.openai.com/v1"  # 기본 API 엔드포인트 명시
-        )
+        openai.api_key = config.OPENAI.API_KEY
+        openai.timeout = 60.0  # 타임아웃 설정 추가
         self.model = config.OPENAI.MODEL
         self.max_tokens = config.OPENAI.MAX_TOKENS
         self.temperature = config.OPENAI.TEMPERATURE
@@ -106,14 +103,14 @@ class QuestionGenerator:
                     """
 
                     try:
-                        response = self.client.chat.completions.create(
+                        response = openai.ChatCompletion.create(
                             model=self.model,
                             messages=[{"role": "user", "content": prompt}],
                             max_tokens=500,  # 토큰 수 제한
                             temperature=0.3  # 더 일관된 결과를 위해 온도 낮춤
                         )
                         
-                        result = response.choices[0].message.content
+                        result = response.choices[0].message['content']
                         parsed = json.loads(result)
                         summaries.append(parsed["요약"])
                         all_topics.update(parsed["핵심 주제"])
@@ -133,13 +130,13 @@ class QuestionGenerator:
 
                         {chunk}
                         """
-                        response = self.client.chat.completions.create(
+                        response = openai.ChatCompletion.create(
                             model=self.model,
                             messages=[{"role": "user", "content": prompt}],
                             max_tokens=200,
                             temperature=0.3
                         )
-                        final_summary.append(response.choices[0].message.content)
+                        final_summary.append(response.choices[0].message['content'])
                         time.sleep(1)
                     
                     final_text = " ".join(final_summary)
@@ -164,14 +161,14 @@ class QuestionGenerator:
             \"\"\"{content}\"\"\"
             """
 
-            response = self.client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=500,
                 temperature=0.3
             )
             
-            return response.choices[0].message.content
+            return response.choices[0].message['content']
             
         except Exception as e:
             raise Exception(f"요약 생성 중 오류 발생: {str(e)}")
@@ -257,7 +254,7 @@ class QuestionGenerator:
         {topics_str}
         """
 
-        response: ChatCompletion = self.client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=self.max_tokens,
@@ -265,7 +262,7 @@ class QuestionGenerator:
         )
         
         # 응답을 JSON 객체로 파싱하여 반환
-        result = json.loads(response.choices[0].message.content)
+        result = json.loads(response.choices[0].message['content'])
         return json.dumps(result, ensure_ascii=False)
 
     def generate_multiple_choice(self, question: str) -> str:
@@ -290,10 +287,10 @@ class QuestionGenerator:
 
         이 차이를 바탕으로 친절하고 교육적인 피드백을 작성해주세요."""
 
-        response: ChatCompletion = self.client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=self.max_tokens,
             temperature=self.temperature
         )
-        return response.choices[0].message.content 
+        return response.choices[0].message['content'] 
