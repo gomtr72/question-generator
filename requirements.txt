@@ -10,7 +10,6 @@ flask-wtf==1.2.1
 flask-cors==4.0.0
 werkzeug==2.3.7
 pydantic==1.10.13
-pydantic-settings==1.0.0
 python-logging-loki==0.3.1
 structlog==23.2.0
 google-api-python-client==2.173.0
