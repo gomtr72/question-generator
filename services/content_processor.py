@@ -7,7 +7,7 @@ from youtube_transcript_api.formatters import TextFormatter
 import io
 import re
 from PIL import Image
-import pytesseract
+# import pytesseract  # OCR 기능 임시 비활성화
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from config import get_config
@@ -62,26 +62,7 @@ class ContentProcessor:
     @staticmethod
     def process_image(image_file):
         """이미지 파일에서 텍스트를 추출합니다."""
-        try:
-            if isinstance(image_file, str):
-                if '\x00' in image_file:  # null byte 체크
-                    raise ValueError("올바르지 않은 이미지 파일입니다.")
-                
-                # 파일 경로인 경우
-                image = Image.open(image_file)
-            else:
-                # 파일 객체인 경우
-                image = Image.open(io.BytesIO(image_file.read()))
-            
-            # 이미지에서 텍스트 추출
-            text = pytesseract.image_to_string(image, lang='kor+eng')
-            
-            if not text.strip():
-                return "이미지에서 텍스트를 추출할 수 없습니다."
-            
-            return text.strip()
-        except Exception as e:
-            return f"이미지 처리 중 오류가 발생했습니다: {str(e)}"
+        return "OCR 기능은 현재 비활성화되어 있습니다. 추후 업데이트 예정입니다."
 
     @staticmethod
     def extract_video_id(url: str) -> str:
