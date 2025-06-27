@@ -9,7 +9,10 @@ import json
 class QuestionGenerator:
     def __init__(self):
         config = get_config()
-        self.client = OpenAI(api_key=config.OPENAI.API_KEY)
+        self.client = OpenAI(
+            api_key=config.OPENAI.API_KEY,
+            base_url="https://api.openai.com/v1"  # 기본 API 엔드포인트 명시
+        )
         self.model = config.OPENAI.MODEL
         self.max_tokens = config.OPENAI.MAX_TOKENS
         self.temperature = config.OPENAI.TEMPERATURE
