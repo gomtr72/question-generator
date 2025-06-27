@@ -11,8 +11,8 @@ class QuestionType(str, Enum):
     ANALYSIS = "analysis"
     SYNTHESIS = "synthesis"
 
-# 질문 유형 설정을 클래스 외부로 이동
-QUESTION_TYPES: Dict[str, List[str]] = {
+# 질문 유형 설정
+QUESTION_TYPES = {
     QuestionType.ANALYSIS: [
         '비교 분석',
         '원인 분석',
@@ -73,7 +73,10 @@ class Config(BaseSettings):
     DEBUG: bool = Field(default=True)
     TESTING: bool = Field(default=False)
     SECRET_KEY: str = Field(default="dev-key-123")
-    FLASK_DEBUG: Optional[str] = None
+    FLASK_DEBUG: str = Field(default=None)
+    
+    # 질문 타입 설정
+    QUESTION_TYPES: dict = Field(default=QUESTION_TYPES)
     
     # 컴포넌트별 설정
     QUESTION: QuestionConfig = QuestionConfig()
@@ -112,7 +115,4 @@ config_by_name = {
 # 현재 환경 설정 가져오기
 def get_config() -> Config:
     env = os.getenv("FLASK_ENV", "development")
-    config = config_by_name[env]
-    # QUESTION_TYPES를 동적으로 추가
-    setattr(config, 'QUESTION_TYPES', QUESTION_TYPES)
-    return config 
+    return config_by_name[env] 
