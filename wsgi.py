@@ -1,4 +1,8 @@
-from app import app
+# wsgi.py
+
+from app import create_app
+
+application = create_app()
 
 if __name__ == '__main__':
-    app.run() 
+    application.run(host='0.0.0.0', port=8000)
